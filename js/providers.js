@@ -71,7 +71,7 @@
   }
 
   function checkResponse(res) {
-    if (res.ok) return;
+    if (res.ok) return Promise.resolve();
     return res.text().then(function (text) {
       var msg = "HTTP " + res.status;
       try {

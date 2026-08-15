@@ -306,6 +306,7 @@
   function setBusy(busy) {
     S.busy = busy;
     el.busyLabel.hidden = !busy;
+    el.busyLabel.textContent = busy ? "working…" : "";
     el.sendBtn.hidden = busy;
     el.stopBtn.hidden = !busy;
   }
@@ -388,14 +389,16 @@
         renderKeysForm();
         renderLayerStatus();
         renderProviderSelect();
-        renderWelcome();
+        if (S.activeId) renderMessages();
+        else renderWelcome();
       } else if (e.target.closest(".remove")) {
         St.removeByokKey(p.keyName);
         flashStatus(p.keyName + " removed.");
         renderKeysForm();
         renderLayerStatus();
         renderProviderSelect();
-        renderWelcome();
+        if (S.activeId) renderMessages();
+        else renderWelcome();
       }
     });
 
