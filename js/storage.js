@@ -8,6 +8,7 @@
 
   var KEYS_DB = "methoryn_siteagent_byok";
   var CHATS_DB = "methoryn_siteagent_chats";
+  var VALIDATION_DB = "methoryn_siteagent_validation";
 
   // ── BYOK keys ────────────────────────────────────────────────────────────
 
@@ -42,6 +43,28 @@
 
   function hasByokKey(name) {
     return Boolean((loadByok())[name]);
+  }
+
+  // ── Key validation status (mirrors the CLI's live setup checks) ─────────
+
+  function loadValidation() {
+    try {
+      return JSON.parse(localStorage.getItem(VALIDATION_DB)) || {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function setValidation(providerKey, status) {
+    var v = loadValidation();
+    if (status) v[providerKey] = status;
+    else delete v[providerKey];
+    localStorage.setItem(VALIDATION_DB, JSON.stringify(v));
+  }
+
+  function isSetupComplete() {
+    var v = loadValidation();
+    return Object.keys(v).length > 0;
   }
 
   // ── Chats ────────────────────────────────────────────────────────────────
@@ -97,6 +120,9 @@
     removeByokKey: removeByokKey,
     listByokKeys: listByokKeys,
     hasByokKey: hasByokKey,
+    loadValidation: loadValidation,
+    setValidation: setValidation,
+    isSetupComplete: isSetupComplete,
     loadChats: loadChats,
     saveChats: saveChats,
     createChat: createChat,

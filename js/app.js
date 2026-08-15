@@ -1,6 +1,7 @@
 /**
  * app.js — Methoryn SiteAgent chat UI.
- * Sidebar chats · streaming multi-provider replies · BYOK settings.
+ * Groq-only chat (L1 orchestrator) · blocking setup gate · chat rename ·
+ * BYOK settings with live key validation (mirrors the CLI).
  */
 (function () {
   "use strict";
@@ -10,13 +11,14 @@
   var Md = window.MethorynMarkdown;
 
   var ACTIVE_DB = "methoryn_siteagent_active_chat";
+  var CHAT_PROVIDER = "groq"; // the one agent you talk to — the CLI's L1
 
   var S = {
     chats: St.loadChats(),
     activeId: localStorage.getItem(ACTIVE_DB) || null,
-    provider: "groq",
     busy: false,
     controller: null,
+    setupMode: false,
   };
 
   // ── Element refs ─────────────────────────────────────────────────────────
@@ -28,7 +30,6 @@
     settingsBtn: $("settings-btn"),
     layerStatus: $("layer-status"),
     chatTitle: $("chat-title"),
-    providerSelect: $("provider-select"),
     busyLabel: $("busy-label"),
     messages: $("messages"),
     input: $("input"),
@@ -37,6 +38,7 @@
     modal: $("settings-modal"),
     modalClose: $("settings-close"),
     modalDone: $("settings-done"),
+    modalNote: $("settings-note"),
     keysForm: $("keys-form"),
     settingsStatus: $("settings-status"),
   };
@@ -45,7 +47,6 @@
 
   function init() {
     el.modal.hidden = true;
-    renderProviderSelect();
     renderLayerStatus();
     bindEvents();
 
@@ -54,42 +55,62 @@
     } else {
       renderWelcome();
     }
+
+    // First-run gate, exactly like the CLI: no chat until every required
+    // key (Layers 1–4) is configured and validated.
+    if (!requiredReady()) openSettings();
   }
 
-  // ── Sidebar: provider select + layer status ──────────────────────────────
+  // ── Setup gate helpers ───────────────────────────────────────────────────
 
-  function renderProviderSelect() {
-    var html = "";
+  function validationFor(key) {
+    return St.loadValidation()[key];
+  }
+
+  function requiredReady() {
+    var all = true;
     Object.keys(Pr.PROVIDERS).forEach(function (key) {
       var p = Pr.PROVIDERS[key];
-      var cfg = Pr.isConfigured(key);
-      html += "<option value=\"" + key + "\">" + p.label + " — " + p.model +
-        (cfg ? "" : "  (no key)") + "</option>";
+      if (!p.required) return;
+      if (!Pr.isConfigured(key) || validationFor(key) !== "ok") all = false;
     });
-    el.providerSelect.innerHTML = html;
+    return all;
   }
+
+  // ── Sidebar: agent layer status ──────────────────────────────────────────
 
   function renderLayerStatus() {
     var html = "";
     Object.keys(Pr.PROVIDERS).forEach(function (key) {
       var p = Pr.PROVIDERS[key];
       var cfg = Pr.isConfigured(key);
-      html += "<div class=\"layer-row " + (cfg ? "on" : "off") + "\">" +
+      var v = validationFor(key);
+      var ok = cfg && (v === "ok" || !p.required);
+      var text = !cfg ? "no key"
+        : v === "ok" ? "valid ✓"
+        : v === "fail" ? "invalid ✗"
+        : "saved";
+      html += "<div class=\"layer-row " + (ok ? "on" : "off") + "\">" +
         "<span class=\"dot\"></span>" +
         "<span class=\"name\">" + p.label + "</span>" +
-        "<span>" + (cfg ? "key ✓" : "no key") + "</span>" +
+        "<span>" + text + "</span>" +
         "</div>";
     });
     el.layerStatus.innerHTML = html;
   }
 
+  // ── Welcome ──────────────────────────────────────────────────────────────
+
   function renderWelcome() {
     var cards = Object.keys(Pr.PROVIDERS).map(function (key) {
       var p = Pr.PROVIDERS[key];
       var cfg = Pr.isConfigured(key);
-      var state = cfg
-        ? "<div class=\"state ready\">● configured</div>"
-        : "<div class=\"state missing\">○ no key — add in Settings</div>";
+      var v = validationFor(key);
+      var state;
+      if (!cfg) state = "<div class=\"state missing\">○ no key — add in Settings</div>";
+      else if (v === "fail") state = "<div class=\"state missing\">✗ key invalid</div>";
+      else if (v === "ok" || !p.required) state = "<div class=\"state ready\">● configured</div>";
+      else state = "<div class=\"state missing\">○ key saved — not validated</div>";
       return "<div class=\"w-card\">" +
         "<div class=\"layer\">" + p.layer + "</div>" +
         "<div class=\"title\">" + p.label + " · " + p.model + "</div>" +
@@ -101,7 +122,7 @@
         "<div class=\"w-logo\">◉ Methoryn</div>" +
         "<div class=\"w-tagline\">SiteAgent · one brain · many hands · full control</div>" +
         "<div class=\"w-layers\">" + cards + "</div>" +
-        "<div class=\"w-hint\">Pick a layer in the top bar and start chatting.</div>" +
+        "<div class=\"w-hint\">You chat with L1 Groq — the full five-layer stack stays configured behind it.</div>" +
       "</div>";
     el.chatTitle.textContent = "New chat";
   }
@@ -117,7 +138,10 @@
       var cls = "chat-item" + (c.id === S.activeId ? " active" : "");
       return "<div class=\"" + cls + "\" data-id=\"" + c.id + "\">" +
         "<span class=\"chat-name\"></span>" +
-        "<button class=\"del\" data-del=\"" + c.id + "\" title=\"Delete chat\">✕</button>" +
+        "<span class=\"chat-actions\">" +
+          "<button class=\"rename\" data-rename=\"" + c.id + "\" title=\"Rename chat\">✎</button>" +
+          "<button class=\"del\" data-del=\"" + c.id + "\" title=\"Delete chat\">✕</button>" +
+        "</span>" +
         "</div>";
     }).join("");
     el.chatList.innerHTML = html;
@@ -127,6 +151,46 @@
     S.chats.forEach(function (c, i) {
       if (items[i]) items[i].querySelector(".chat-name").textContent = c.title;
     });
+  }
+
+  function startRename(id) {
+    var item = el.chatList.querySelector('.chat-item[data-id="' + id + '"]');
+    if (!item) return;
+    var name = item.querySelector(".chat-name");
+    if (!name) return;
+    var input = document.createElement("input");
+    input.className = "rename-input";
+    input.value = name.textContent;
+    input.maxLength = 60;
+    name.replaceWith(input);
+    input.focus();
+    input.select();
+
+    var done = false;
+    function commit() {
+      if (done) return;
+      done = true;
+      var title = input.value.trim();
+      var chat = St.getChat(id);
+      if (chat) {
+        if (title && title !== chat.title) {
+          chat.title = title;
+          St.updateChat(chat);
+        }
+        S.chats = St.loadChats();
+        renderChatList();
+      }
+    }
+    function cancel() {
+      if (done) return;
+      done = true;
+      renderChatList();
+    }
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); commit(); }
+      else if (e.key === "Escape") { cancel(); }
+    });
+    input.addEventListener("blur", commit);
   }
 
   function newChat() {
@@ -203,7 +267,7 @@
     el.messages.scrollTop = el.messages.scrollHeight;
   }
 
-  // ── Sending ──────────────────────────────────────────────────────────────
+  // ── Sending (Groq only — the L1 orchestrator) ───────────────────────────
 
   function sendMessage() {
     if (S.busy) return;
@@ -215,13 +279,12 @@
     }
     var chat = activeChat();
 
-    var byok = St.loadByok();
-    var p = Pr.PROVIDERS[S.provider];
-    var apiKey = byok[p.keyName];
+    var p = Pr.PROVIDERS[CHAT_PROVIDER];
+    var apiKey = St.loadByok()[p.keyName];
 
     if (!apiKey) {
       openSettings();
-      flashStatus("Add your " + p.keyName + " in Settings to chat with " + p.label + ".");
+      flashStatus("Add your " + p.keyName + " in Settings to chat.");
       return;
     }
 
@@ -299,8 +362,8 @@
       }
     }).finally(function () {
       setBusy(false);
-      renderChatList();
-      el.input.focus();
+      S.controller = null;
+      if (el.input.value) autoResize();
     });
   }
 
@@ -316,9 +379,11 @@
     el.stopBtn.hidden = !busy;
   }
 
-  // ── Settings (BYOK) ──────────────────────────────────────────────────────
+  // ── Settings (BYOK + setup gate) ─────────────────────────────────────────
 
   function openSettings() {
+    S.setupMode = !requiredReady();
+    renderModalControls();
     try {
       renderKeysForm();
     } catch (err) {
@@ -329,41 +394,98 @@
   }
 
   function closeSettings() {
+    if (S.setupMode && !requiredReady()) {
+      flashStatus("Add and validate every required key (Layers 1–4) to continue.");
+      return;
+    }
     el.modal.hidden = true;
     el.settingsStatus.textContent = "";
+  }
+
+  function renderModalControls() {
+    el.modalClose.hidden = S.setupMode;
+    el.modalDone.disabled = S.setupMode;
+    el.modalDone.textContent = S.setupMode
+      ? "Continue — add required keys"
+      : "Done";
   }
 
   function renderKeysForm() {
     var html = Object.keys(Pr.PROVIDERS).map(function (key) {
       var p = Pr.PROVIDERS[key];
       var cfg = Pr.isConfigured(key);
+      var v = validationFor(key);
+      var stateCls = "key-state";
+      var stateTxt;
+      if (!cfg) { stateTxt = "○ not set"; }
+      else if (v === "ok") { stateCls += " on"; stateTxt = "● valid"; }
+      else if (v === "fail") { stateCls += " bad"; stateTxt = "✗ invalid"; }
+      else { stateCls += " on"; stateTxt = "● saved — save again to validate"; }
+
+      var req = p.required
+        ? "<span class=\"badge-required\">Required</span>"
+        : "<span class=\"badge-opt\">Optional</span>";
+
+      var inputs = "<input class=\"key\" type=\"password\" placeholder=\"" +
+        (cfg ? "••••••••  (saved — type to replace)" : "Paste your " + p.keyName) +
+        "\" autocomplete=\"off\">";
+      if (p.accountName) {
+        var hasAccount = St.hasByokKey(p.accountName);
+        inputs += "<input class=\"account\" type=\"text\" placeholder=\"" +
+          (hasAccount ? "••••••••  (saved — type to replace)" : "Paste your " + p.accountName) +
+          "\" autocomplete=\"off\">";
+      }
+
       return "<div class=\"key-row\" data-key=\"" + key + "\">" +
         "<div class=\"key-head\">" +
           "<span class=\"key-name\">" + p.keyName + "</span>" +
-          "<span class=\"key-state " + (cfg ? "on" : "") + "\">" +
-            (cfg ? "● saved" : "○ not set") + "</span>" +
+          "<span class=\"" + stateCls + "\">" + stateTxt + "</span>" +
         "</div>" +
-        "<div class=\"layer-line\">" + p.layer + " · " + p.model + "</div>" +
-        "<input type=\"password\" placeholder=\"" + (cfg ? "••••••••  (saved — type to replace)" : "Paste your " + p.keyName) + "\" autocomplete=\"off\">" +
+        "<div class=\"layer-line\">" + p.layer + " · " + p.model + " " + req + "</div>" +
+        inputs +
         "<div class=\"key-actions\">" +
-          "<button class=\"mini-btn save\">Save key</button>" +
+          "<button class=\"mini-btn save\">Save &amp; validate</button>" +
           (cfg ? "<button class=\"mini-btn danger remove\">Remove</button>" : "") +
         "</div>" +
       "</div>";
     }).join("");
     el.keysForm.innerHTML = html;
+  }
 
-    // Google workspace note
-    var note = document.createElement("p");
-    note.className = "modal-note";
-    note.innerHTML = "<span style=\"color:var(--text-dim)\">Google Workspace (Gmail/Drive/Docs) uses OAuth via the CLI's credentials.json — a browser-only site cannot run that flow securely. " +
-      "Your <b>GOOGLE_API_KEY</b> above still powers Gemini chat/research right here.</span>";
-    el.keysForm.appendChild(note);
+  function saveAndValidate(p, val, accountVal) {
+    St.saveByokKey(p.keyName, val);
+    if (p.accountName && accountVal) St.saveByokKey(p.accountName, accountVal);
+    St.setValidation(p.key, "");
+
+    if (!p.required) {
+      St.setValidation(p.key, "ok");
+      renderKeysForm();
+      renderLayerStatus();
+      renderModalControls();
+      flashStatus(p.label + " key saved ✓");
+      return;
+    }
+
+    var st = document.querySelector('#keys-form .key-row[data-key="' + p.key + '"] .key-state');
+    if (st) { st.textContent = "↻ validating…"; st.className = "key-state busy"; }
+
+    Pr.validate(p, val, accountVal).then(function (r) {
+      St.setValidation(p.key, r.ok ? "ok" : "fail");
+      renderKeysForm();
+      renderLayerStatus();
+      renderModalControls();
+      flashStatus(r.msg);
+      if (r.ok && requiredReady()) {
+        S.setupMode = false;
+        renderModalControls();
+        setTimeout(function () { closeSettings(); }, 1200);
+      }
+    });
   }
 
   function flashStatus(msg) {
     el.settingsStatus.textContent = msg;
-    setTimeout(function () { el.settingsStatus.textContent = ""; }, 3500);
+    setTimeout(function () { el.settingsStatus.textContent = ""; }, 6000);
   }
 
   // ── Events ───────────────────────────────────────────────────────────────
@@ -374,6 +496,8 @@
     el.chatList.addEventListener("click", function (e) {
       var del = e.target.closest("[data-del]");
       if (del) { deleteChat(del.getAttribute("data-del")); return; }
+      var rn = e.target.closest("[data-rename]");
+      if (rn) { startRename(rn.getAttribute("data-rename")); return; }
       var item = e.target.closest(".chat-item");
       if (item) selectChat(item.getAttribute("data-id"));
     });
@@ -390,35 +514,28 @@
       if (!row) return;
       var key = row.getAttribute("data-key");
       var p = Pr.PROVIDERS[key];
-      var input = row.querySelector("input");
+
       if (e.target.closest(".save")) {
-        var val = input.value.trim();
-        if (!val) { flashStatus("Paste a key first."); return; }
-        St.saveByokKey(p.keyName, val);
-        flashStatus(p.keyName + " saved — active now.");
-        renderKeysForm();
-        renderLayerStatus();
-        renderProviderSelect();
-        if (S.activeId) renderMessages();
-        else renderWelcome();
+        var input = row.querySelector("input.key");
+        var val = input ? input.value.trim() : "";
+        if (!val) { flashStatus("Paste a " + p.keyName + " first."); return; }
+        var accountInput = row.querySelector("input.account");
+        var accountVal = accountInput ? accountInput.value.trim() : "";
+        if (p.accountName && !accountVal) {
+          flashStatus("Paste your " + p.accountName + " too.");
+          return;
+        }
+        saveAndValidate(p, val, accountVal);
       } else if (e.target.closest(".remove")) {
         St.removeByokKey(p.keyName);
-        flashStatus(p.keyName + " removed.");
+        if (p.accountName) St.removeByokKey(p.accountName);
+        St.setValidation(key, "");
+        S.setupMode = !requiredReady();
         renderKeysForm();
         renderLayerStatus();
-        renderProviderSelect();
+        renderModalControls();
         if (S.activeId) renderMessages();
         else renderWelcome();
-      }
-    });
-
-    el.providerSelect.addEventListener("change", function () {
-      S.provider = el.providerSelect.value;
-      if (!Pr.isConfigured(S.provider)) {
-        var p = Pr.PROVIDERS[S.provider];
-        el.busyLabel.textContent = "no key for " + p.label;
-        el.busyLabel.hidden = false;
-        setTimeout(function () { if (!S.busy) el.busyLabel.hidden = true; }, 3000);
       }
     });
 
