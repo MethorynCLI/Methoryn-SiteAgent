@@ -173,8 +173,11 @@
 
   function buildMessages(history) {
     var trimmed = history.slice(-MAX_HISTORY);
+    var sanitized = trimmed.map(function (m) {
+      return { role: m.role, content: String(m.content || "") };
+    });
     var messages = [{ role: "system", content: buildSystemPrompt() }];
-    return messages.concat(trimmed);
+    return messages.concat(sanitized);
   }
 
   // ── Live key validation (mirrors CLI setup_screen.py) ───────────────────
