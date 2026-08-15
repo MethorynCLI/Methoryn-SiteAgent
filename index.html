@@ -86,11 +86,13 @@
           <span class="badge-opt">Optional</span>
         </div>
         <p class="google-note">
-          Create real Google Docs from chat with your own Google account. Paste a
-          <strong>Web OAuth Client ID</strong> from
-          <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console</a>
-          (Authorized JavaScript origin:
-          <code>https://methoryncli.github.io</code>; enable the Docs API), then connect.
+          Create real Google Docs from chat with your own Google account. In
+          <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console</a>,
+          create an <strong>OAuth client ID → Web application</strong> (your CLI uses a
+          Desktop client, which browsers won't authorize — a Web client uses the same
+          project, account &amp; consent screen). Authorized JavaScript origin:
+          <code>https://methoryncli.github.io</code>. Enable the Docs API, then paste the
+          Web client ID below and connect.
         </p>
         <input id="g-client-id" class="key" type="password" placeholder="Paste your OAuth Client ID" autocomplete="off">
         <div class="key-actions">
