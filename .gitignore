@@ -1,0 +1,22 @@
+# Public repo - never commit secrets
+credentials.json
+.env
+.env.*
+token.pickle
+google_token.json
+*.token.json
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+
+# Runtime data
+sessions/
+outputs/
+
+# Build artifacts
+dist/
+build/
