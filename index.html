@@ -7,6 +7,7 @@
   <title>Methoryn SiteAgent</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>◉</text></svg>">
   <link rel="stylesheet" href="style.css">
+  <script src="https://accounts.google.com/gsi/client"></script>
 </head>
 <body>
 
@@ -14,7 +15,7 @@
   <aside id="sidebar">
     <div class="brand">
       <div class="hero-badge">
-        <span></span> v0.1.53 — Free to install
+        <span></span> v0.1.54 — Free to install
       </div>
       <div class="logo">
         <span class="logo-dot">◉</span> Methoryn
@@ -61,7 +62,7 @@
         </button>
         <button id="stop-btn" title="Stop" hidden>■</button>
       </div>
-      <p class="composer-hint">You chat with L1 Groq — the full five-layer stack (Cloudflare, Gemini, Mistral, NVIDIA) stays configured behind it. Browser-only: no PowerShell, no shell. Your API keys stay on this device.</p>
+      <p class="composer-hint">You chat with L1 Groq — the full five-layer stack (Cloudflare, Gemini, Mistral, NVIDIA) stays configured behind it. Browser-only: no PowerShell, no shell. Connect a Google account in Settings to create real Google Docs. Your API keys stay on this device.</p>
     </footer>
   </main>
 
@@ -78,6 +79,27 @@
         only in your browser (<code>localStorage</code>) and never leave your device.
       </p>
       <div id="keys-form" class="keys-form"></div>
+
+      <div id="google-section" class="google-section">
+        <div class="google-head">
+          <span class="g-logo">G</span> Google Docs
+          <span class="badge-opt">Optional</span>
+        </div>
+        <p class="google-note">
+          Create real Google Docs from chat with your own Google account. Paste a
+          <strong>Web OAuth Client ID</strong> from
+          <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console</a>
+          (Authorized JavaScript origin:
+          <code>https://methoryncli.github.io</code>; enable the Docs API), then connect.
+        </p>
+        <input id="g-client-id" class="key" type="password" placeholder="Paste your OAuth Client ID" autocomplete="off">
+        <div class="key-actions">
+          <button id="g-connect" class="mini-btn save">Connect Google account</button>
+          <button id="g-disconnect" class="mini-btn danger" hidden>Disconnect</button>
+        </div>
+        <div id="g-status" class="g-status"></div>
+      </div>
+
       <div class="modal-foot">
         <span id="settings-status" class="settings-status"></span>
         <button id="settings-done" class="primary-btn">Done</button>
@@ -88,6 +110,7 @@
   <script src="js/markdown.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/providers.js"></script>
+  <script src="js/google.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

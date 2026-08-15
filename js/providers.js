@@ -162,21 +162,33 @@
 
   var MAX_HISTORY = 20;
 
-  function buildSystemPrompt() {
+  function buildSystemPrompt(googleEmail) {
+    var env = "Browser-only: no shell, no PowerShell, no file access. You generate text only.";
+    if (googleEmail) {
+      env += " | Google Docs connected as " + googleEmail +
+        " (you can create real Google Docs when the user asks).";
+    } else {
+      env += " | Google Docs: NOT connected — never emit GOOGLE_TOOL unless the user connects in Settings.";
+    }
     return [
       "You are Methoryn — a multi-agent AI assistant running in the user's web browser.",
       "You are Layer 1 (Groq), the conversation & orchestration agent. Behind you sits a five-layer stack: L2 Cloudflare (library & task-planner), L3 Gemini (research & multimodal), L4 Mistral (coding agent), L5 NVIDIA (quality control).",
       "In the browser you CANNOT run shell commands, PowerShell, or code, and you cannot touch the user's computer. Keep everything to conversation, explanation, and generated content.",
+      env,
+      "When the user asks to CREATE or EDIT a Google Doc and Google is connected, emit each action as its own single line of JSON:",
+      'GOOGLE_TOOL: {"action":"create_doc","title":"<doc name>"}',
+      'GOOGLE_TOOL: {"action":"insert_text","document_id":"$doc","text":"<full text here>"}',
+      "$doc refers to the doc created by the previous create_doc line. Emit all GOOGLE_TOOL lines first, then a short plain-text confirmation. Do not fabricate a doc link — the browser will replace it.",
       "STYLE: concise plain prose; match the user's language; use backtick paths or commands as text; never fabricate outputs; after answering, offer one short follow-up.",
     ].join("\n");
   }
 
-  function buildMessages(history) {
+  function buildMessages(history, googleEmail) {
     var trimmed = history.slice(-MAX_HISTORY);
     var sanitized = trimmed.map(function (m) {
       return { role: m.role, content: String(m.content || "") };
     });
-    var messages = [{ role: "system", content: buildSystemPrompt() }];
+    var messages = [{ role: "system", content: buildSystemPrompt(googleEmail || "") }];
     return messages.concat(sanitized);
   }
 

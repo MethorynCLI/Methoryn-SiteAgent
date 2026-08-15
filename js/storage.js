@@ -9,6 +9,8 @@
   var KEYS_DB = "methoryn_siteagent_byok";
   var CHATS_DB = "methoryn_siteagent_chats";
   var VALIDATION_DB = "methoryn_siteagent_validation";
+  var GOOGLE_DB = "methoryn_siteagent_google";
+  var GOOGLE_CLIENT_DB = "methoryn_siteagent_gclient";
 
   // ── BYOK keys ────────────────────────────────────────────────────────────
 
@@ -67,6 +69,32 @@
     return Object.keys(v).length > 0;
   }
 
+  // ── Google account connection (OAuth token + email) ──────────────────────
+
+  function loadGoogleConnection() {
+    try {
+      return JSON.parse(localStorage.getItem(GOOGLE_DB)) || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function saveGoogleConnection(conn) {
+    localStorage.setItem(GOOGLE_DB, JSON.stringify(conn));
+  }
+
+  function clearGoogleConnection() {
+    localStorage.removeItem(GOOGLE_DB);
+  }
+
+  function getGoogleClientId() {
+    return localStorage.getItem(GOOGLE_CLIENT_DB) || "";
+  }
+
+  function saveGoogleClientId(id) {
+    localStorage.setItem(GOOGLE_CLIENT_DB, id);
+  }
+
   // ── Chats ────────────────────────────────────────────────────────────────
 
   function loadChats() {
@@ -123,6 +151,11 @@
     loadValidation: loadValidation,
     setValidation: setValidation,
     isSetupComplete: isSetupComplete,
+    loadGoogleConnection: loadGoogleConnection,
+    saveGoogleConnection: saveGoogleConnection,
+    clearGoogleConnection: clearGoogleConnection,
+    getGoogleClientId: getGoogleClientId,
+    saveGoogleClientId: saveGoogleClientId,
     loadChats: loadChats,
     saveChats: saveChats,
     createChat: createChat,

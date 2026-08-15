@@ -9,6 +9,7 @@
   var St = window.MethorynStorage;
   var Pr = window.MethorynProviders;
   var Md = window.MethorynMarkdown;
+  var G = window.MethorynGoogle;
 
   var ACTIVE_DB = "methoryn_siteagent_active_chat";
   var CHAT_PROVIDER = "groq"; // the one agent you talk to — the CLI's L1
@@ -41,6 +42,10 @@
     modalNote: $("settings-note"),
     keysForm: $("keys-form"),
     settingsStatus: $("settings-status"),
+    gClientId: $("g-client-id"),
+    gConnect: $("g-connect"),
+    gDisconnect: $("g-disconnect"),
+    gStatus: $("g-status"),
   };
 
   // ── Init ─────────────────────────────────────────────────────────────────
@@ -122,7 +127,7 @@
         "<div class=\"w-logo\">◉ Methoryn</div>" +
         "<div class=\"w-tagline\">SiteAgent · one brain · many hands · full control</div>" +
         "<div class=\"w-layers\">" + cards + "</div>" +
-        "<div class=\"w-hint\">You chat with L1 Groq — the full five-layer stack stays configured behind it.</div>" +
+        "<div class=\"w-hint\">You chat with L1 Groq — the full five-layer stack stays configured behind it. Connect a Google account in Settings and you can create real Google Docs from chat.</div>" +
       "</div>";
     el.chatTitle.textContent = "New chat";
   }
@@ -305,16 +310,51 @@
     scrollBottom();
 
     setBusy(true);
-    var accumulated = "";
+    var raw = "";
+    var visible = "";
+    var lineBuf = "";
+    var toolLines = [];
+    var toolPending = false;
+
+    // Pull `GOOGLE_TOOL:` protocol lines out of the stream so the browser can
+    // execute them; return the visible (tool-free) portion of the text.
+    function stripTools(d) {
+      lineBuf += d;
+      var lines = lineBuf.split("\n");
+      lineBuf = lines.pop();
+      var out = "";
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        var t = line.trim();
+        if (t.indexOf("GOOGLE_TOOL:") === 0) {
+          toolLines.push(t.slice("GOOGLE_TOOL:".length).trim());
+          toolPending = t.slice(-1) !== "}";
+        } else if (toolPending && (t.indexOf("{") === 0 || t.indexOf("}") === 0)) {
+          toolLines[toolLines.length - 1] += "\n" + line;
+          if (t.slice(-1) === "}") toolPending = false;
+        } else {
+          toolPending = false;
+          out += line + "\n";
+        }
+      }
+      return out;
+    }
+
+    function visibleSoFar() {
+      var partial = lineBuf;
+      var t = partial.trim();
+      if (t.indexOf("GOOGLE_TOOL:") === 0 || (toolPending && t.length > 0)) partial = "";
+      return visible + partial;
+    }
 
     function onDelta(d) {
-      accumulated += d;
-      node.content.innerHTML = Md.render(accumulated) +
-        "<span class=\"caret\">▍</span>";
+      raw += d;
+      visible += stripTools(d);
+      node.content.innerHTML = Md.render(visibleSoFar()) + "<span class=\"caret\">▍</span>";
       scrollBottom();
     }
     function onDone() {
-      node.content.innerHTML = Md.render(accumulated);
+      node.content.innerHTML = Md.render(visibleSoFar());
       scrollBottom();
     }
     function onError(err) {
@@ -323,8 +363,58 @@
       scrollBottom();
     }
 
+    function runGoogleTools(lines, node, chat) {
+      if (!G) return Promise.resolve();
+      return G.executeLines(lines).then(function (results) {
+        var resultText = results.map(function (r) {
+          return (r.ok ? "✓ " : "✗ ") + r.msg;
+        }).join("\n");
+        node.content.insertAdjacentHTML("beforeend",
+          "<div class=\"tool-result\">" + Md.escapeHtml(resultText).replace(/\n/g, "<br>") + "</div>");
+        scrollBottom();
+        var base = node.content.innerHTML;
+        var m = chat.messages[chat.messages.length - 1];
+        return followUpConfirmation(chat, m, base, resultText, node);
+      });
+    }
+
+    function followUpConfirmation(chat, m, base, resultText, node) {
+      var apiKey = St.loadByok()[p.keyName];
+      if (!apiKey) return Promise.resolve();
+      var history = chat.messages.concat([{
+        role: "user",
+        content: "[GOOGLE TOOL RESULTS]\n" + resultText +
+          "\n\nConfirm concisely to the user, including the doc link if present.",
+      }]);
+      return new Promise(function (resolve) {
+        S.controller = new AbortController();
+        var acc = "";
+        p.stream({
+          apiKey: apiKey,
+          model: p.model,
+          messages: Pr.buildMessages(history, G && G.getConnectedEmail()),
+          onDelta: function (d) {
+            acc += d;
+            node.content.innerHTML = base + Md.render(acc) + "<span class=\"caret\">▍</span>";
+            scrollBottom();
+          },
+          onDone: function () {
+            node.content.innerHTML = base + Md.render(acc);
+            scrollBottom();
+          },
+          signal: S.controller.signal,
+        }).then(function () {
+          m.content = m.content + "\n\n" + acc;
+          St.updateChat(chat);
+          resolve();
+        }).catch(function () {
+          resolve();
+        });
+      });
+    }
+
     S.controller = new AbortController();
-    var messages = Pr.buildMessages(chat.messages);
+    var messages = Pr.buildMessages(chat.messages, G && G.getConnectedEmail());
 
     p.stream({
       apiKey: apiKey,
@@ -334,23 +424,32 @@
       onDone: onDone,
       signal: S.controller.signal,
     }).then(function () {
+      var finalVisible = visibleSoFar();
+      node.content.innerHTML = Md.render(finalVisible);
       chat.messages.push({
         role: "assistant",
-        content: accumulated,
+        content: finalVisible,
         providerLabel: p.label,
       });
       chat.provider = p.key;
       chat.model = p.model;
       St.updateChat(chat);
+      if (toolLines.length && G) {
+        setBusy(true);
+        return runGoogleTools(toolLines, node, chat).then(function () {
+          node.content.insertAdjacentHTML("beforeend",
+            "<p class=\"provider-tag\">— via " + Md.escapeHtml(p.label) + "</p>");
+        });
+      }
       node.content.insertAdjacentHTML("beforeend",
         "<p class=\"provider-tag\">— via " + Md.escapeHtml(p.label) + "</p>");
     }).catch(function (err) {
       if (err.message === "aborted") {
-        node.content.innerHTML = Md.render(accumulated) +
+        node.content.innerHTML = Md.render(visibleSoFar()) +
           "<p><span style=\"color:var(--text-muted)\">— stopped</span></p>";
         chat.messages.push({
           role: "assistant",
-          content: accumulated + "\n\n— stopped",
+          content: visibleSoFar() + "\n\n— stopped",
           providerLabel: p.label,
         });
         chat.provider = p.key;
@@ -390,7 +489,55 @@
       el.keysForm.innerHTML = "<p style=\"color:var(--danger)\">Could not load providers: " +
         Md.escapeHtml(String(err && err.message || err)) + "</p>";
     }
+    renderGoogleSection();
     el.modal.hidden = false;
+  }
+
+  function renderGoogleSection() {
+    if (!G) return;
+    el.gClientId.value = St.getGoogleClientId();
+    var conn = G.getConnection();
+    if (conn) {
+      el.gConnect.hidden = true;
+      el.gDisconnect.hidden = false;
+      var expired = conn.expires_at && conn.expires_at <= Date.now();
+      el.gStatus.textContent = expired
+        ? "Connected as " + conn.email + " — session expired, reconnect."
+        : "Connected as " + conn.email + " — Google Docs available in chat.";
+      el.gStatus.style.color = expired ? "var(--warn)" : "var(--ok)";
+    } else {
+      el.gConnect.hidden = false;
+      el.gDisconnect.hidden = true;
+      el.gStatus.textContent = "Not connected.";
+      el.gStatus.style.color = "";
+    }
+  }
+
+  function handleGoogleConnect() {
+    if (!G) {
+      flashStatus("Google sign-in library not available — check your network.");
+      return;
+    }
+    var clientId = el.gClientId.value.trim();
+    if (!clientId) {
+      flashStatus("Paste your Google OAuth Client ID first.");
+      return;
+    }
+    St.saveGoogleClientId(clientId);
+    el.gStatus.textContent = "Opening Google sign-in…";
+    G.connect(clientId).then(function (email) {
+      renderGoogleSection();
+      flashStatus("Google account connected: " + email + " ✓");
+    }).catch(function (err) {
+      renderGoogleSection();
+      flashStatus("Google connect failed: " + String(err && err.message || err));
+    });
+  }
+
+  function handleGoogleDisconnect() {
+    if (G) G.disconnect();
+    renderGoogleSection();
+    flashStatus("Google account disconnected.");
   }
 
   function closeSettings() {
@@ -508,6 +655,9 @@
     el.modal.addEventListener("click", function (e) {
       if (e.target === el.modal) closeSettings();
     });
+
+    el.gConnect.addEventListener("click", handleGoogleConnect);
+    el.gDisconnect.addEventListener("click", handleGoogleDisconnect);
 
     el.keysForm.addEventListener("click", function (e) {
       var row = e.target.closest(".key-row");

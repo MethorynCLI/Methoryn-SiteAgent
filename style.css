@@ -735,6 +735,105 @@ button {
 
 .settings-status { font-size: 12px; color: var(--ok); font-family: var(--font-mono); }
 
+.google-section {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.google-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.google-head .g-logo {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface3);
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.google-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 8px 0 12px;
+  line-height: 1.5;
+}
+
+.google-note code {
+  font-family: var(--font-mono);
+  background: var(--surface3);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.google-note a { color: var(--accent); }
+
+#google-section input.key {
+  width: 100%;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+#google-section input.key:focus { outline: none; border-color: var(--accent-dim); }
+
+#google-section .key-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: flex-end;
+}
+
+#google-section .mini-btn {
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  color: var(--text);
+  background: var(--surface3);
+}
+
+#google-section .mini-btn:hover { border-color: var(--accent-dim); color: var(--accent); }
+#google-section .mini-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+.g-status {
+  margin-top: 8px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  min-height: 16px;
+}
+
+.tool-result {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-dim);
+  border-radius: 7px;
+  background: var(--surface2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .primary-btn {
   background: var(--accent);
   color: #00110c;
