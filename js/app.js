@@ -42,7 +42,6 @@
     modalNote: $("settings-note"),
     keysForm: $("keys-form"),
     settingsStatus: $("settings-status"),
-    gClientId: $("g-client-id"),
     gConnect: $("g-connect"),
     gDisconnect: $("g-disconnect"),
     gStatus: $("g-status"),
@@ -495,7 +494,6 @@
 
   function renderGoogleSection() {
     if (!G) return;
-    el.gClientId.value = St.getGoogleClientId();
     var conn = G.getConnection();
     if (conn) {
       el.gConnect.hidden = true;
@@ -518,14 +516,8 @@
       flashStatus("Google sign-in library not available — check your network.");
       return;
     }
-    var clientId = el.gClientId.value.trim();
-    if (!clientId) {
-      flashStatus("Paste your Google OAuth Client ID first.");
-      return;
-    }
-    St.saveGoogleClientId(clientId);
     el.gStatus.textContent = "Opening Google sign-in…";
-    G.connect(clientId).then(function (email) {
+    G.connect().then(function (email) {
       renderGoogleSection();
       flashStatus("Google account connected: " + email + " ✓");
     }).catch(function (err) {

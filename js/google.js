@@ -12,6 +12,7 @@
   var St = window.MethorynStorage;
 
   var SCOPE = "https://www.googleapis.com/auth/documents";
+  var DEFAULT_CLIENT_ID = "91203123933-84k159ldkciga6nlbo5ib7bcd13uunrd.apps.googleusercontent.com";
 
   var lastDocId = null;
 
@@ -45,6 +46,7 @@
    * Rejects with a readable message on failure or if the library is missing.
    */
   function connect(clientId) {
+    clientId = clientId || DEFAULT_CLIENT_ID;
     return new Promise(function (resolve, reject) {
       if (!gisReady()) {
         reject(new Error(

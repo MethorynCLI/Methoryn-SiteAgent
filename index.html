@@ -15,7 +15,7 @@
   <aside id="sidebar">
     <div class="brand">
       <div class="hero-badge">
-        <span></span> v0.1.54 — Free to install
+        <span></span> v0.1.55 — Free to install
       </div>
       <div class="logo">
         <span class="logo-dot">◉</span> Methoryn
@@ -86,15 +86,10 @@
           <span class="badge-opt">Optional</span>
         </div>
         <p class="google-note">
-          Create real Google Docs from chat with your own Google account. In
-          <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console</a>,
-          create an <strong>OAuth client ID → Web application</strong> (your CLI uses a
-          Desktop client, which browsers won't authorize — a Web client uses the same
-          project, account &amp; consent screen). Authorized JavaScript origin:
-          <code>https://methoryncli.github.io</code>. Enable the Docs API, then paste the
-          Web client ID below and connect.
+          Create real Google Docs from chat with your own Google account.
+          No setup — sign in once and the page can write documents to your Drive.
+          Tokens stay in your browser and expire after about an hour (reconnect if needed).
         </p>
-        <input id="g-client-id" class="key" type="password" placeholder="Paste your OAuth Client ID" autocomplete="off">
         <div class="key-actions">
           <button id="g-connect" class="mini-btn save">Connect Google account</button>
           <button id="g-disconnect" class="mini-btn danger" hidden>Disconnect</button>
