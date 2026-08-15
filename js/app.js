@@ -44,6 +44,7 @@
   // ── Init ─────────────────────────────────────────────────────────────────
 
   function init() {
+    el.modal.hidden = true;
     renderProviderSelect();
     renderLayerStatus();
     bindEvents();
@@ -278,6 +279,8 @@
       chat.provider = p.key;
       chat.model = p.model;
       St.updateChat(chat);
+      node.content.insertAdjacentHTML("beforeend",
+        "<p class=\"provider-tag\">— via " + Md.escapeHtml(p.label) + "</p>");
     }).catch(function (err) {
       if (err.message === "aborted") {
         node.content.innerHTML = Md.render(accumulated) +
@@ -289,6 +292,8 @@
         });
         chat.provider = p.key;
         St.updateChat(chat);
+        node.content.insertAdjacentHTML("beforeend",
+          "<p class=\"provider-tag\">— via " + Md.escapeHtml(p.label) + "</p>");
       } else {
         onError(err);
       }
@@ -314,7 +319,12 @@
   // ── Settings (BYOK) ──────────────────────────────────────────────────────
 
   function openSettings() {
-    renderKeysForm();
+    try {
+      renderKeysForm();
+    } catch (err) {
+      el.keysForm.innerHTML = "<p style=\"color:var(--danger)\">Could not load providers: " +
+        Md.escapeHtml(String(err && err.message || err)) + "</p>";
+    }
     el.modal.hidden = false;
   }
 
