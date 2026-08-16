@@ -501,7 +501,7 @@
       var expired = conn.expires_at && conn.expires_at <= Date.now();
       el.gStatus.textContent = expired
         ? "Connected as " + conn.email + " — session expired, reconnect."
-        : "Connected as " + conn.email + " — Google Docs available in chat.";
+        : "Connected as " + conn.email + " — Google resources available in chat.";
       el.gStatus.style.color = expired ? "var(--warn)" : "var(--ok)";
     } else {
       el.gConnect.hidden = false;
