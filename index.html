@@ -3,111 +3,153 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Methoryn SiteAgent — a browser-based multi-agent AI chat. Bring your own API keys.">
+  <meta name="description" content="Methoryn SiteAgent — temporarily unavailable">
   <title>Methoryn SiteAgent</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>◉</text></svg>">
-  <link rel="stylesheet" href="style.css">
-  <script src="https://accounts.google.com/gsi/client"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #08090e;
+      color: #d2d7dc;
+      font-family: "Consolas", "Menlo", "Monaco", monospace;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .card {
+      max-width: 520px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #00dcaa;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.25rem;
+    }
+
+    .logo-dot { opacity: 0.7; margin-right: 0.25rem; }
+
+    .logo-sub {
+      font-size: 0.85rem;
+      color: #415060;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 2.5rem;
+    }
+
+    .status-badge {
+      display: inline-block;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
+      padding: 0.5rem 1rem;
+      font-size: 0.78rem;
+      color: #f0c040;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 2rem;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #f0c040;
+      margin-right: 0.5rem;
+      vertical-align: middle;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    .message {
+      font-size: 1.05rem;
+      color: #8a9aaa;
+      line-height: 1.7;
+      margin-bottom: 2.5rem;
+    }
+
+    .message strong { color: #d2d7dc; font-weight: 600; }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #1e1e1e;
+      margin: 0 auto 2rem;
+      width: 60%;
+    }
+
+    .alt-label {
+      font-size: 0.8rem;
+      color: #415060;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .cli-box {
+      background: #0d0f14;
+      border: 1px solid #1e2228;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      text-align: left;
+      font-size: 0.85rem;
+      color: #6a7a8a;
+      line-height: 1.8;
+    }
+
+    .cli-box .prompt { color: #00dcaa; user-select: none; }
+    .cli-box .cmd    { color: #d2d7dc; }
+    .cli-box .comment{ color: #415060; }
+
+    .footer {
+      margin-top: 3rem;
+      font-size: 0.72rem;
+      color: #2a3040;
+    }
+  </style>
 </head>
 <body>
+  <div class="card">
 
-  <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
-  <aside id="sidebar">
-    <div class="brand">
-      <div class="hero-badge">
-        <span></span> v0.1.59 — Free to install
-      </div>
-      <div class="logo">
-        <span class="logo-dot">◉</span> Methoryn
-        <span class="logo-sub">SiteAgent</span>
-      </div>
-      <p class="tagline">one brain · many hands · full control</p>
+    <div class="logo">
+      <span class="logo-dot">◉</span> Methoryn
+      <span class="logo-sub">SiteAgent</span>
     </div>
 
-    <button id="new-chat" class="new-chat">
-      <span class="icon">✚</span> New chat
-    </button>
-
-    <div id="chat-list" class="chat-list"></div>
-
-    <div class="sidebar-footer">
-      <div id="layer-status" class="layer-status"></div>
-      <button id="settings-btn" class="settings-btn" title="API keys (BYOK)">
-        <span class="icon">⚙</span> Settings
-      </button>
-    </div>
-  </aside>
-
-  <!-- ── Main ────────────────────────────────────────────────────────────── -->
-  <main id="main">
-    <header id="topbar">
-      <div id="chat-title" class="chat-title">New chat</div>
-      <div class="topbar-right">
-        <span id="busy-label" class="busy-label" hidden>working…</span>
-        <span class="topbar-agent" title="You chat with the L1 orchestrator">◉ L1 Groq</span>
-      </div>
-    </header>
-
-    <div id="messages" class="messages">
-      <!-- welcome screen injected by app.js -->
+    <div class="status-badge">
+      <span class="status-dot"></span> Not available at the moment
     </div>
 
-    <footer id="composer-wrap">
-      <div id="composer">
-        <textarea id="input" rows="1" placeholder="Message Methoryn… (Enter to send, Shift+Enter for newline)"></textarea>
-        <button id="send-btn" title="Send">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 2 11 13"/><path d="M22 2 15 22 11 13 2 9 22 2z"/>
-          </svg>
-        </button>
-        <button id="stop-btn" title="Stop" hidden>■</button>
-      </div>
-      <p class="composer-hint">You chat with L1 Groq — the full five-layer stack (Cloudflare, Gemini, Mistral, NVIDIA) stays configured behind it. Browser-only: no PowerShell, no shell. Connect a Google account in Settings to create real Google Docs. Your API keys stay on this device.</p>
-    </footer>
-  </main>
+    <p class="message">
+      The browser-based SiteAgent is currently <strong>offline</strong>.<br>
+      We're reworking it to match the new 2-agent architecture.
+    </p>
 
-  <!-- ── Settings modal ──────────────────────────────────────────────────── -->
-  <div id="settings-modal" class="modal" hidden>
-    <div class="modal-box">
-      <div class="modal-head">
-        <h2>Settings — API Keys &amp; Setup</h2>
-        <button id="settings-close" class="icon-btn" title="Close">✕</button>
-      </div>
-      <p id="settings-note" class="modal-note">
-        Layers 1–4 (Groq, Cloudflare, Gemini, Mistral) are required — NVIDIA is
-        optional. Each key is validated live, just like the CLI. Keys are stored
-        only in your browser (<code>localStorage</code>) and never leave your device.
-      </p>
-      <div id="keys-form" class="keys-form"></div>
+    <hr class="divider">
 
-      <div id="google-section" class="google-section">
-        <div class="google-head">
-          <span class="g-logo">G</span> Google Account
-          <span class="badge-opt">Optional</span>
-        </div>
-        <p class="google-note">
-          Create real Google items from chat with your own Google account.
-          No setup — sign in once and the page can write documents to your Drive.
-          Tokens stay in your browser and expire after about an hour (reconnect if needed).
-        </p>
-        <div class="key-actions">
-          <button id="g-connect" class="mini-btn save">Connect Google account</button>
-          <button id="g-disconnect" class="mini-btn danger" hidden>Disconnect</button>
-        </div>
-        <div id="g-status" class="g-status"></div>
-      </div>
+    <p class="alt-label">Use the desktop CLI instead</p>
 
-      <div class="modal-foot">
-        <span id="settings-status" class="settings-status"></span>
-        <button id="settings-done" class="primary-btn">Done</button>
-      </div>
+    <div class="cli-box">
+      <div><span class="prompt">$ </span><span class="cmd">pip install methoryn</span></div>
+      <div><span class="prompt">$ </span><span class="cmd">methoryn</span></div>
+      <div class="comment"># Powered by Ollama (local) · Qwen 2.5 Coder + Gemini</div>
     </div>
+
+    <p class="footer">Methoryn &nbsp;·&nbsp; 2-agent local AI &nbsp;·&nbsp; Qwen 2.5 Coder + Gemini Flash</p>
+
   </div>
-
-  <script src="js/markdown.js"></script>
-  <script src="js/storage.js"></script>
-  <script src="js/providers.js"></script>
-  <script src="js/google.js"></script>
-  <script src="js/app.js"></script>
 </body>
 </html>
